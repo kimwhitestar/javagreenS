@@ -1,0 +1,20 @@
+1.pom.xml에 lib추가 spring-webmvc 확인
+		<dependency>
+			<groupId>org.springframework</groupId>
+			<!--  Legacy Project를 spring-webmvc로 만들면 Interceptor 사용할 수 있다 -->
+			<artifactId>spring-webmvc</artifactId>
+			<version>${org.springframework-version}</version>
+		</dependency>
+
+2. 인터셉터 클래스 생성
+___Interceptor.java
+
+3. servlet-context.xml에 
+	<!-- Interceptor 설정 -->
+	<beans:bean id="___Interceptor" class="com.spring.springTest.interceptor.___Interceptor" />
+	<interceptors>
+		<interceptor >
+			<mapping path="/" />
+			<beans:ref bean="___Interceptor" /><!-- bean name이 bean id이다 -->	
+		</interceptor>
+	</interceptors>

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.spring.javagreenS.dao.BoardDAO">
+<!-- 수정 <mapper namespace="org.mybatis.example.BlogMapper"></mapper> -->
+	<select id="searchBoardListTotRecCnt" resultType="int">
+		select count(*) as totRecCnt from board
+	</select>
+	<select id="searchBoardListTotSearchRecCnt" resultType="int">
+		select count(*) as totRecCnt from board where ${searchCondition} like concat('%', #{searchingKeyWord},'%')
+	</select>
+	<select id="searchBoardList" resultType="com.spring.javagreenS.vo.BoardVO">
+	    select *, (select count(*) from boardReply where boardIdx=bb.idx) as replyCount, cast(TIMESTAMPDIFF(MINUTE, wDate, NOW()) / 60 as signed integer) AS diffTime  from board as bb order by idx desc limit #{startIndexNo},#{pageSize};
+	</select>
+	<select id="searchBoardSearchList" resultType="com.spring.javagreenS.vo.BoardVO">
+		select *, cast(timestampdiff(minute, #{wDate}, now()) / 60 as signed integer) as diffTime from board where ${searchCondition} like concat('%', #{searchingKeyWord},'%') order by idx desc limit #{startIndexNo}, #{pageSize}
+	</select>
+	<select id="searchBoard" resultType="com.spring.javagreenS.vo.BoardVO">
+		select * from board where idx = #{idx}
+	</select>
+	<!-- 크고 작은 연산자를 mibatis에서는 사용안되서 CDATA로 변환해서 사용. 단, 동적query에서는 CDATA(convert data)를 사용할 수 없다 -->
+	<select id="searchPrevNextBoard" resultType="com.spring.javagreenS.vo.BoardVO">
+		select idx, title from board where idx in (
+			(select idx from board where <![CDATA[idx < #{idx}]]> order by idx desc limit 1 /*이전글*/),
+			(select idx from board where <![CDATA[idx > #{idx}]]> limit 1 /*다음글*/)
+		)
+	</select>
+	<insert id="insertBoard">
+		insert into board values (default,#{vo.nickName},#{vo.title},#{vo.email},#{vo.homepage},#{vo.content},#{vo.WDate},#{vo.mid},#{vo.hostIp},default,default,default,default)
+	</insert>
+	<update id="updateReadNum">
+		update board set readNum = readNum + 1;
+	</update>
+	<delete id="deleteBoard">
+		delete from board where where idx = #{idx}
+	</delete>
+	<update id="updateBoard">
+		update board set 
+			nickName = #{vo.nickName},
+			title = #{vo.title},
+			email = #{vo.email},
+			homepage = #{vo.homepage},
+			content = #{vo.content},
+			hostIp = #{vo.hostIp}
+		where idx = #{vo.idx}
+	</update>
+</mapper>

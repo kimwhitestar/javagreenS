@@ -1,0 +1,142 @@
+0-1. sts 환경설정(한글코드 encoding= UTF-8)
+0-2. Tomcat server설정
+0-3 프로젝트 빌드패스 -> 라이브러리 -> server runtime 추가 
+
+1. 프로젝트생성 (Legacy Project)
+:파일명 '프로젝트명'
+:생성시 '패키지명'을 3개 이상 지정. 이때 3번째가 contextPath가 된다
+
+2. pom.xml에서 사용중인 자바/스프링/메이븐 버전을 설정
+자바버전 : 1.8
+스프링버전 : 4.3.14
+메이븐 : 소스1.8, 타겟1.8
+
+ # maven작업완료시는 항상 maven update하여야함
+
+3. 자바 컴파일버전 : 1.8
+
+4.한글처리 : web.xml 필터 추가
+	<!-- 한글처리(필터적용) AOP -->
+	<filter>
+		<filter-name>encoding</filter-name>
+		<filter-class>org.springframework.web.filter.CharacterEncodingFilter</filter-class>
+		<init-param>
+			<param-name>encoding</param-name>
+			<param-value>UTF-8</param-value>
+		</init-param>
+	</filter>
+	<filter-mapping>
+		<filter-name>encoding</filter-name>
+		<url-pattern>/*</url-pattern>
+	</filter-mapping>
+
+
+ # web.xml 에러발생시 http ----> https로 수정
+
+5. pom.xml에 의존성 추가
+- Tiles 의존성 추가 (Tiles 사용할 경우에만 추가)
+- Lombok 의존성 추가(VO getter,setter생략가능한 툴)
+
+6. Tiles셋팅 (사용하는 경우 vs 사용하지않는 경우)
+servlet-context.xml 추가
+
+7. Lombok lib 설치
+https://mvnrepository.com/artifact/org.projectlombok/lombok/1.18.12에서 복사해서 의존성 추가 pom.xml -> maven update로 설치하면, 
+프로젝트에서 라이브러리폴더에 jar화일 추가되고 그 것을 아래처럼 실행 설치
+lombok-1.18.12.jar 파일에서 오른쪽 버튼 -> run as -> java application 실행 후 설치
+
+8. 데이터검증 추가 maven repository -> Hibernate Validator Engine » 6.2.0.Final (버전은 꼭 맞추기) -> pom.xml추가 -> maven update
+에러나거든 6.2.2.Final 버전은 되던데...
+
+9. DB 연결 추가 maven repository에서 아래6개 조회 -> pom.xml추가 -> maven update
+<!-- Mybatis 3.5.7 -->
+<!-- Mybatis Spring 2.0.6 -->
+<!-- Spring JDBC 5.3.18 -->
+<!-- MySQL Connector/J 8.0.27 (java용) -->
+<!-- Jackson Databind 2.13.1 (Ajax 라이브러리) -->
+<!-- Data Mapper For Jackson 1.9.13 -->
+
+10. root-context.xml에 Namespace탭에서 설정(5개)
+aop, beans, context, jdbc, mybatis 선택 저장
+
+11. root-context.xml에 db연결 추가
+	<!-- 데이타베이스 연결 (JDBC) -->
+	<bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+		<property name="driverClassName" value="com.mysql.jdbc.Driver" />
+		<property name="url" value="jdbc:mysql://localhost:3306/javagreen" />
+		<property name="username" value="root" />
+		<property name="password" value="1234" />
+	</bean>
+
+	<!-- MyBatis Spring 연결 (모듈) : mapper에 sql(~sql.xml) 정보설정(DAO에서 sql작성안함)-->
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="dataSource" />
+		<property name="mapperLocations" value="classpath:mappers/**/*Mapper.xml" />
+	</bean>
+
+	<!-- mapper정보 설정후 불러서 사용하기위한 의존객체 설정-->
+	<bean id="sqlSessionTemplate" class="org.mybatis.spring.SqlSessionTemplate">
+		<constructor-arg index="0" ref="sqlSessionFactory" />
+	</bean>
+
+	<!-- mybatis가 주입해줘야하는 dao객체가 있는 곳 설정 -->
+	<mybatis-spring:scan base-package="com.spring.springTest.dao"/>
+
+[웹 검색 참고]
+SqlSessionTemplate은 SqlSession을 구현하고 코드에서 SqlSession를 대체하는 역할을 한다. 
+SqlSessionTemplate 은 쓰레드에 안전하고 여러개의 DAO나 매퍼에서 공유할수 있다.
+SqlSessionTemplate은 MyBatatis 이전에 사용하던 방식이며 DAO 클래스에 직접 SqlSession객체를 선언하고 @Autowried로 의존주입하여 쿼리문을 수행하는 방식이다.
+
+---------------------------
+패키지 : ~dao, ~vo, ~service, ~pagination
+폴더 : src/main/resources/mappers/ 
+---------------------------
+
+12. ~Mapper.xml 작성
+https://mybatis.org/mybatis-3/getting-started.html에서 Exploring Mapped SQL Statements 내용 복사 후 mapper.xml화일 생성해서 내용 추가
+예제) userMapper.xml (UserDAO클래스 매핑용)
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper
+  PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+  "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.spring.springTest.dao.UserDAO">
+<!-- 수정 <mapper namespace="org.mybatis.example.BlogMapper"></mapper> -->
+  <select id="getUserList" resultType="com.spring.springTest.vo.UserVO" >
+  	select * from user order by idx desc;
+  </select>
+  <select id="searchUser" resultType="com.spring.springTest.vo.UserVO" >
+  	select * from user where idx = #{idx};
+  </select>
+  <delete id="deleteUser">
+  	delete from user where idx = #{idx};
+  </delete>
+  <insert id="insertUser">
+  	insert into user values ( default, #{vo.mid}, #{vo.name}, #{vo.age}, #{vo.address} );
+  </insert>
+  <update id="updateUser">
+  	update user set name=#{vo.name}, age=#{vo.age}, address=#{vo.address} where idx=#{vo.idx};
+  </update>
+</mapper>
+
+
+13. 인터셉터 추가
+
+# 참고사항
+(1) jsp화일 한글처리 추가
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+
+(2) IPv4변경
+project -> run as -> run configure -> tomcat -> argument 마지막줄에 추가
+ -Djava.net.preferIPv4Stack=true
+
+(3) jsp화일 contextPath 추가
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c" %>
+<c:set var="ctxPath" value="${pageContext.request.contextPath}"/>
+
+13_2. Ajax에서 VO받을 경우
+(1)pom.xml에 9번에서 받은 jacson 라이브러리 2개가 필요하며,
+(2) bs4.jsp에 jquery 라이브러리도 필요하다
+jquery download (https://developers.google.com/speed/libraries#jquery)에 가서
+구글 cdn주소 복사해서 넣기
+구글 cdn주소 : <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
